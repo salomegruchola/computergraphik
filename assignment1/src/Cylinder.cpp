@@ -49,10 +49,7 @@ intersect(const Ray&  _ray,
     // then determine whether the ray goes through in-between the two planes
     
     std::array<double, 2> t;
-    //size_t nsol = solveQuadratic(dot(d,d) - dot(d,h)*dot(h,d) - dot(d,h)*dot(d,h) + dot(d,h)*dot(d,h) *                         dot(h,h),
-    //                             dot(z,d)*dot(d,z) - dot(z,h) * dot(h,d) - dot(d,h) * dot(h,z) - dot(d,h) * dot(z,h) - dot(z,h) * dot(d,h) + dot(d,h) * dot(z,h) * dot(h,h) + dot(z,h) * dot(d,h) * dot(h,h)  ,
-    //                            dot(z,z) - 2 * dot(z,h)*dot(z,h) + dot(z,h)*dot(z,h) * dot(h,h) - radius*radius,t)   ;
-    
+
     size_t nsol = solveQuadratic(dot(d,d)-dot(d,h)*dot(d,h)*dot(h,h),
                                  +2*dot(z,d)-2*dot(z,h)*dot(d,h)*dot(h,h),
                                  dot(z,z)-dot(z,h)*dot(z,h)*dot(h,h)-radius*radius,t);
@@ -60,39 +57,51 @@ intersect(const Ray&  _ray,
     _intersection_t = NO_INTERSECTION;
     
     // Find the closest valid solution (in front of the viewer)
+    int no_sol = 0;
     
     for (size_t i = 0; i < nsol; ++i) {
         if (t[i] > 0){
+            // if there is only one solution, check if higher than cylinder, otherwise take this as intersection point
             if(nsol == 1){
-                if(abs(dot((_ray(t[i]) - center),axis)) > 1){
-                    _intersection_t = NO_INTERSECTION;
-                }
+                if(abs(dot((_ray(t[i]) - center),axis)) > 1){}
                 else{_intersection_t = t[i];}
             }
+            // if there are two solutions, check which one is closer to the viewer, but check also, if the solutions are not above the hight of the cylinder
             if (nsol == 2){
-                if(abs(dot((_ray(t[i]) - center),axis)) > 1){}
-                else{_intersection_t = std::min(_intersection_t,t[i]);}
+                if(i == 0){
+                    if(abs(dot((_ray(t[i]) - center),axis)) > 1){no_sol = 1;}
+                    else{_intersection_t = std::min(_intersection_t,t[i]);}
+                }
+                if(i == 1){
+                    if(no_sol ==0){
+                        if(abs(dot((_ray(t[i]) - center),axis)) > 1){_intersection_t = _intersection_t;}
+                        else{_intersection_t = std::min(_intersection_t,t[i]);}
+                    }
+                    if(no_sol ==1){
+                        if(abs(dot((_ray(t[i]) - center),axis)) > 1){_intersection_t = NO_INTERSECTION;}
+                        else{_intersection_t = t[i];}
+                    }
+                }
             }
-            else{
-                _intersection_t = NO_INTERSECTION;
-            }
+            else{_intersection_t = NO_INTERSECTION;}
         }
         //printf("%f", t[i]);
     }
     
     if (_intersection_t == NO_INTERSECTION) return false;
-    
     _intersection_point  = _ray(_intersection_t);
     
-    
-    if(dot(_intersection_point - center,axis)<0){
-        const vec3 p = -h;
+    // compute normal
+    if(nsol == 1){
         _intersection_normal = ((_intersection_point - center) -
-                                dot(_intersection_point - center,p)*p)/radius;
+                                          dot(_intersection_point - center,h)*h)/radius;
     }
+    // if there are two solutions and the one further away from the spectator is chosen, the normal needs to point into the other direction --> add a minus
     else{
-        _intersection_normal = ((_intersection_point - center) -
-                                dot(_intersection_point - center,h)*h)/radius;
+        if(_intersection_t == std::max(t[0],t[1])){_intersection_normal = -((_intersection_point - center) -
+                                                                            dot(_intersection_point - center,h)*h)/radius;}
+        else{_intersection_normal = ((_intersection_point - center) -
+                                     dot(_intersection_point - center,h)*h)/radius;}
     }
     
     return true;
@@ -104,31 +113,18 @@ intersect(const Ray&  _ray,
 // blabliblablu
 
 /*
+
  for (size_t i = 0; i < nsol; ++i) {
  if (t[i] > 0){
  if(nsol == 1){
- if(abs(dot((_ray(t[i]) - center),axis)) > 0.5){
+ if(abs(dot((_ray(t[i]) - center),axis)) > 1){
  _intersection_t = NO_INTERSECTION;
  }
  else{_intersection_t = t[i];}
  }
  if (nsol == 2){
- if(i == 0){
- if(abs(dot((_ray(t[i]) - center),axis)) > 0.5){}
- else{
- _intersection_t = std::min(_intersection_t,t[i]);
- sol = 1;
- }
- }
- else{
- if(abs(dot((_ray(t[i]) - center),axis)) > 0.5 and sol == 1){
- _intersection_t = std::min(_intersection_t,t[i]);
- }
- else if(abs(dot((_ray(t[i]) - center),axis)) > 0.5 and sol == 0){
- _intersection_t = t[i];
- }
- else{ _intersection_t = NO_INTERSECTION;}
- }
+ if(abs(dot((_ray(t[i]) - center),axis)) > 1){}
+ else{_intersection_t = std::min(_intersection_t,t[i]);}
  }
  else{
  _intersection_t = NO_INTERSECTION;
@@ -137,4 +133,3 @@ intersect(const Ray&  _ray,
  //printf("%f", t[i]);
  }
  */
-

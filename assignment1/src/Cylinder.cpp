@@ -50,9 +50,18 @@ intersect(const Ray&  _ray,
     
     std::array<double, 2> t;
 
-    size_t nsol = solveQuadratic(dot(d,d)-dot(d,h)*dot(d,h)*dot(h,h),
-                                 +2*dot(z,d)-2*dot(z,h)*dot(d,h)*dot(h,h),
-                                 dot(z,z)-dot(z,h)*dot(z,h)*dot(h,h)-radius*radius,t);
+    
+    //quadratic term:
+    double quad = dot(d,d)-dot(d,h)*dot(d,h)*dot(h,h);
+    // linear term:
+    double lin = +2*dot(z,d)-2*dot(z,h)*dot(d,h)*dot(h,h);
+    // constant term:
+    double con = dot(z,z)-dot(z,h)*dot(z,h)*dot(h,h)-radius*radius;
+    
+    size_t nsol = solveQuadratic(quad, lin, con, t);
+    
+        bool flag = false;
+        if( dot((_ray(t[1]) - center ),axis) < 0){flag = true;}
     
     _intersection_t = NO_INTERSECTION;
     
@@ -69,7 +78,7 @@ intersect(const Ray&  _ray,
             // if there are two solutions, check which one is closer to the viewer, but check also, if the solutions are not above the hight of the cylinder
             if (nsol == 2){
                 if(i == 0){
-                    if(abs(dot((_ray(t[i]) - center),axis)) > 1){no_sol = 1;}
+                    if(abs(dot((_ray(t[i]) - center),axis)) > 1){no_sol = 1;} //case: first intersection point invalid
                     else{_intersection_t = std::min(_intersection_t,t[i]);}
                 }
                 if(i == 1){
@@ -88,6 +97,7 @@ intersect(const Ray&  _ray,
         //printf("%f", t[i]);
     }
     
+    
     if (_intersection_t == NO_INTERSECTION) return false;
     _intersection_point  = _ray(_intersection_t);
     
@@ -96,6 +106,7 @@ intersect(const Ray&  _ray,
         _intersection_normal = ((_intersection_point - center) -
                                           dot(_intersection_point - center,h)*h)/radius;
     }
+    
     // if there are two solutions and the one further away from the spectator is chosen, the normal needs to point into the other direction --> add a minus
     else{
         if(_intersection_t == std::max(t[0],t[1])){_intersection_normal = -((_intersection_point - center) -
